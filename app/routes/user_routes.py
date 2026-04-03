@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.role_checker import require_roles
 from app.database import get_db
@@ -11,8 +11,8 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.post("", dependencies=[Depends(require_roles("admin"))])
-def create_user(payload: UserCreateRequest, db: Session = Depends(get_db)):
-    user = user_service.create_user(payload, db)
+async def create_user(payload: UserCreateRequest, db: AsyncSession = Depends(get_db)):
+    user = await user_service.create_user(payload, db)
     return success_response(
         "User created successfully",
         {
@@ -27,8 +27,8 @@ def create_user(payload: UserCreateRequest, db: Session = Depends(get_db)):
 
 
 @router.get("", dependencies=[Depends(require_roles("admin"))])
-def list_users(db: Session = Depends(get_db)):
-    users = user_service.list_users(db)
+async def list_users(db: AsyncSession = Depends(get_db)):
+    users = await user_service.list_users(db)
     return success_response(
         "Users fetched successfully",
         [
@@ -46,8 +46,8 @@ def list_users(db: Session = Depends(get_db)):
 
 
 @router.get("/{user_id}", dependencies=[Depends(require_roles("admin"))])
-def get_user(user_id: int, db: Session = Depends(get_db)):
-    user = user_service.get_user_or_404(user_id, db)
+async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
+    user = await user_service.get_user_or_404(user_id, db)
     return success_response(
         "User fetched successfully",
         {
@@ -62,8 +62,8 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{user_id}", dependencies=[Depends(require_roles("admin"))])
-def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(get_db)):
-    user = user_service.update_user(user_id, payload, db)
+async def update_user(user_id: int, payload: UserUpdateRequest, db: AsyncSession = Depends(get_db)):
+    user = await user_service.update_user(user_id, payload, db)
     return success_response(
         "User updated successfully",
         {
@@ -78,8 +78,8 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
 
 
 @router.patch("/{user_id}/status", dependencies=[Depends(require_roles("admin"))])
-def patch_user_status(user_id: int, payload: UserStatusPatchRequest, db: Session = Depends(get_db)):
-    user = user_service.set_user_status(user_id, payload.is_active, db)
+async def patch_user_status(user_id: int, payload: UserStatusPatchRequest, db: AsyncSession = Depends(get_db)):
+    user = await user_service.set_user_status(user_id, payload.is_active, db)
     return success_response(
         "User status updated successfully",
         {
@@ -94,6 +94,6 @@ def patch_user_status(user_id: int, payload: UserStatusPatchRequest, db: Session
 
 
 @router.delete("/{user_id}", dependencies=[Depends(require_roles("admin"))])
-def delete_user(user_id: int, db: Session = Depends(get_db)):
-    user_service.delete_user(user_id, db)
+async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
+    await user_service.delete_user(user_id, db)
     return success_response("User deleted successfully", None)

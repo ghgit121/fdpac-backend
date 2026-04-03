@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, rate_limit
 from app.database import get_db
@@ -11,8 +11,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register")
-def register(payload: RegisterRequest, db: Session = Depends(get_db), _: None = Depends(rate_limit)):
-    user = register_user(payload, db)
+async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db), _: None = Depends(rate_limit)):
+    user = await register_user(payload, db)
     return success_response(
         message="User registered successfully",
         data={
@@ -27,13 +27,13 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db), _: None = 
 
 
 @router.post("/login")
-def login(payload: LoginRequest, db: Session = Depends(get_db), _: None = Depends(rate_limit)):
-    token_data = login_user(payload, db)
+async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db), _: None = Depends(rate_limit)):
+    token_data = await login_user(payload, db)
     return success_response(message="Login successful", data=token_data)
 
 
 @router.get("/me", response_model=MeResponse)
-def me(current_user=Depends(get_current_user)):
+async def me(current_user=Depends(get_current_user)):
     return MeResponse(
         id=current_user.id,
         name=current_user.name,

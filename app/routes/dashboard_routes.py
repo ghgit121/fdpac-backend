@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.role_checker import require_roles
 from app.database import get_db
@@ -10,23 +10,23 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 @router.get("/summary", dependencies=[Depends(require_roles("viewer", "analyst", "admin"))])
-def summary(db: Session = Depends(get_db)):
-    return success_response("Dashboard summary fetched", dashboard_service.get_summary(db))
+async def summary(db: AsyncSession = Depends(get_db)):
+    return success_response("Dashboard summary fetched", await dashboard_service.get_summary(db))
 
 
 @router.get("/category-breakdown", dependencies=[Depends(require_roles("viewer", "analyst", "admin"))])
-def category_breakdown(db: Session = Depends(get_db)):
-    return success_response("Category breakdown fetched", dashboard_service.get_category_breakdown(db))
+async def category_breakdown(db: AsyncSession = Depends(get_db)):
+    return success_response("Category breakdown fetched", await dashboard_service.get_category_breakdown(db))
 
 
 @router.get("/monthly-trends", dependencies=[Depends(require_roles("viewer", "analyst", "admin"))])
-def monthly_trends(db: Session = Depends(get_db)):
-    return success_response("Monthly trends fetched", dashboard_service.get_monthly_trends(db))
+async def monthly_trends(db: AsyncSession = Depends(get_db)):
+    return success_response("Monthly trends fetched", await dashboard_service.get_monthly_trends(db))
 
 
 @router.get("/recent-activity", dependencies=[Depends(require_roles("viewer", "analyst", "admin"))])
-def recent_activity(db: Session = Depends(get_db)):
-    records = dashboard_service.get_recent_activity(db)
+async def recent_activity(db: AsyncSession = Depends(get_db)):
+    records = await dashboard_service.get_recent_activity(db)
     data = [
         {
             "id": row.id,

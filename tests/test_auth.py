@@ -1,12 +1,18 @@
+import asyncio
 from datetime import datetime, timedelta, timezone
 
 from jose import jwt
+from sqlalchemy import select
 
 from app.config import settings
 from app.core.security import hash_password
 from app.database import SessionLocal
 from app.models.role import Role
 from app.models.user import User
+
+
+def _run(coro):
+    return asyncio.run(coro)
 
 
 def test_register_and_login_success(client):
@@ -31,22 +37,26 @@ def test_invalid_login(client):
 
 
 def test_expired_token(client):
-    session = SessionLocal()
-    role = session.query(Role).filter(Role.name == "viewer").first()
-    user = User(
-        name="Expired User",
-        email="expired@example.com",
-        password_hash=hash_password("password123"),
-        role_id=role.id,
-        is_active=True,
-    )
-    session.add(user)
-    session.commit()
-    session.refresh(user)
-    session.close()
+    async def _create_expired_user() -> int:
+        async with SessionLocal() as session:
+            role_result = await session.execute(select(Role).where(Role.name == "viewer"))
+            role = role_result.scalar_one()
+            user = User(
+                name="Expired User",
+                email="expired@example.com",
+                password_hash=hash_password("password123"),
+                role_id=role.id,
+                is_active=True,
+            )
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+            return user.id
+
+    user_id = _run(_create_expired_user())
 
     payload = {
-        "sub": str(user.id),
+        "sub": str(user_id),
         "exp": datetime.now(timezone.utc) - timedelta(minutes=1),
     }
     expired = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)

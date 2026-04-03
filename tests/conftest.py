@@ -1,9 +1,10 @@
+import asyncio
 import os
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import text
+from sqlalchemy import select, text
 
 TEST_DB_PATH = Path(__file__).parent / "test.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB_PATH.as_posix()}"
@@ -15,40 +16,52 @@ from app.main import app
 from app.models.role import Role
 
 
-def _seed_roles():
-    session = SessionLocal()
-    try:
+async def _seed_roles():
+    async with SessionLocal() as session:
         for name, description in [
             ("viewer", "Can only view dashboard data"),
             ("analyst", "Can view records and dashboard insights"),
             ("admin", "Can create update delete records and manage users"),
         ]:
-            exists = session.query(Role).filter(Role.name == name).first()
+            exists_result = await session.execute(select(Role).where(Role.name == name))
+            exists = exists_result.scalar_one_or_none()
             if not exists:
                 session.add(Role(name=name, description=description))
-        session.commit()
-    finally:
-        session.close()
+        await session.commit()
+
+
+async def _reset_schema():
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.drop_all)
+        await connection.run_sync(Base.metadata.create_all)
+
+
+async def _drop_schema():
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.drop_all)
+
+
+def _run(coro):
+    return asyncio.run(coro)
 
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    _seed_roles()
+    _run(_reset_schema())
+    _run(_seed_roles())
     yield
-    Base.metadata.drop_all(bind=engine)
+    _run(_drop_schema())
 
 
 @pytest.fixture(autouse=True)
 def clean_tables():
-    session = SessionLocal()
-    try:
-        session.execute(text("DELETE FROM financial_records"))
-        session.execute(text("DELETE FROM users"))
-        session.commit()
-    finally:
-        session.close()
+    async def _clean():
+        async with SessionLocal() as session:
+            await session.execute(text("DELETE FROM financial_records"))
+            await session.execute(text("DELETE FROM users"))
+            await session.commit()
+
+    _run(_clean())
 
 
 @pytest.fixture

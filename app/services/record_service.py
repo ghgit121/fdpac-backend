@@ -1,15 +1,15 @@
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import and_
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.financial_record import FinancialRecord, RecordType
 from app.schemas.record_schema import RecordCreateRequest, RecordListQuery, RecordUpdateRequest
 from app.utils.pagination import build_page_meta, to_offset
 
 
-def create_record(payload: RecordCreateRequest, user_id: int, db: Session) -> FinancialRecord:
+async def create_record(payload: RecordCreateRequest, user_id: int, db: AsyncSession) -> FinancialRecord:
     record = FinancialRecord(
         amount=payload.amount,
         type=payload.type,
@@ -19,26 +19,26 @@ def create_record(payload: RecordCreateRequest, user_id: int, db: Session) -> Fi
         created_by=user_id,
     )
     db.add(record)
-    db.commit()
-    db.refresh(record)
+    await db.commit()
+    await db.refresh(record)
     return record
 
 
-def get_record_or_404(record_id: int, db: Session) -> FinancialRecord:
-    record = (
-        db.query(FinancialRecord)
-        .filter(FinancialRecord.id == record_id, FinancialRecord.deleted_at.is_(None))
-        .first()
+async def get_record_or_404(record_id: int, db: AsyncSession) -> FinancialRecord:
+    result = await db.execute(
+        select(FinancialRecord).where(
+            FinancialRecord.id == record_id,
+            FinancialRecord.deleted_at.is_(None),
+        )
     )
+    record = result.scalar_one_or_none()
     if not record:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
     return record
 
 
-def list_records(filters: RecordListQuery, db: Session) -> dict:
-    query = db.query(FinancialRecord).filter(FinancialRecord.deleted_at.is_(None))
-
-    conditions = []
+async def list_records(filters: RecordListQuery, db: AsyncSession) -> dict:
+    conditions = [FinancialRecord.deleted_at.is_(None)]
     if filters.type:
         conditions.append(FinancialRecord.type == filters.type)
     if filters.category:
@@ -50,24 +50,30 @@ def list_records(filters: RecordListQuery, db: Session) -> dict:
     if filters.notes:
         conditions.append(FinancialRecord.notes.ilike(f"%{filters.notes}%"))
 
-    if conditions:
-        query = query.filter(and_(*conditions))
+    where_clause = and_(*conditions)
 
-    total = query.count()
-    records = (
-        query.order_by(FinancialRecord.date.desc(), FinancialRecord.id.desc())
+    count_result = await db.execute(
+        select(func.count(FinancialRecord.id)).where(where_clause)
+    )
+    total = count_result.scalar_one()
+
+    items_result = await db.execute(
+        select(FinancialRecord)
+        .where(where_clause)
+        .order_by(FinancialRecord.date.desc(), FinancialRecord.id.desc())
         .offset(to_offset(filters.page, filters.page_size))
         .limit(filters.page_size)
-        .all()
     )
+    records = list(items_result.scalars().all())
+
     return {
         "items": records,
         "pagination": build_page_meta(filters.page, filters.page_size, total),
     }
 
 
-def update_record(record_id: int, payload: RecordUpdateRequest, db: Session) -> FinancialRecord:
-    record = get_record_or_404(record_id, db)
+async def update_record(record_id: int, payload: RecordUpdateRequest, db: AsyncSession) -> FinancialRecord:
+    record = await get_record_or_404(record_id, db)
 
     if payload.amount is not None:
         record.amount = payload.amount
@@ -80,21 +86,22 @@ def update_record(record_id: int, payload: RecordUpdateRequest, db: Session) -> 
     if payload.notes is not None:
         record.notes = payload.notes
 
-    db.commit()
-    db.refresh(record)
+    await db.commit()
+    await db.refresh(record)
     return record
 
 
-def soft_delete_record(record_id: int, db: Session):
-    record = get_record_or_404(record_id, db)
+async def soft_delete_record(record_id: int, db: AsyncSession):
+    record = await get_record_or_404(record_id, db)
     record.deleted_at = datetime.now(timezone.utc)
-    db.commit()
+    await db.commit()
 
 
-def sum_by_type(db: Session, record_type: RecordType) -> float:
-    rows = (
-        db.query(FinancialRecord)
-        .filter(FinancialRecord.type == record_type, FinancialRecord.deleted_at.is_(None))
-        .all()
+async def sum_by_type(db: AsyncSession, record_type: RecordType) -> float:
+    total_result = await db.execute(
+        select(func.coalesce(func.sum(FinancialRecord.amount), 0.0)).where(
+            FinancialRecord.type == record_type,
+            FinancialRecord.deleted_at.is_(None),
+        )
     )
-    return float(sum(row.amount for row in rows))
+    return float(total_result.scalar_one() or 0.0)

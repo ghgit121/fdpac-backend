@@ -1,24 +1,33 @@
+import asyncio
+
+from sqlalchemy import select
+
 from app.core.security import hash_password
 from app.database import SessionLocal
 from app.models.role import Role
 from app.models.user import User
 
 
+def _run(coro):
+    return asyncio.run(coro)
+
+
 def _create_user(email: str, role_name: str):
-    session = SessionLocal()
-    try:
-        role = session.query(Role).filter(Role.name == role_name).first()
-        user = User(
-            name=role_name.title(),
-            email=email,
-            password_hash=hash_password("password123"),
-            role_id=role.id,
-            is_active=True,
-        )
-        session.add(user)
-        session.commit()
-    finally:
-        session.close()
+    async def _create():
+        async with SessionLocal() as session:
+            role_result = await session.execute(select(Role).where(Role.name == role_name))
+            role = role_result.scalar_one()
+            user = User(
+                name=role_name.title(),
+                email=email,
+                password_hash=hash_password("password123"),
+                role_id=role.id,
+                is_active=True,
+            )
+            session.add(user)
+            await session.commit()
+
+    _run(_create())
 
 
 def _login(client, email: str) -> str:

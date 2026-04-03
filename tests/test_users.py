@@ -1,41 +1,51 @@
+import asyncio
+
+from sqlalchemy import select
+
 from app.core.security import hash_password
 from app.database import SessionLocal
 from app.models.role import Role
 from app.models.user import User
 
 
+def _run(coro):
+    return asyncio.run(coro)
+
+
 def _create_admin():
-    session = SessionLocal()
-    try:
-        role = session.query(Role).filter(Role.name == "admin").first()
-        user = User(
-            name="Admin",
-            email="admin@example.com",
-            password_hash=hash_password("password123"),
-            role_id=role.id,
-            is_active=True,
-        )
-        session.add(user)
-        session.commit()
-    finally:
-        session.close()
+    async def _create():
+        async with SessionLocal() as session:
+            role_result = await session.execute(select(Role).where(Role.name == "admin"))
+            role = role_result.scalar_one()
+            user = User(
+                name="Admin",
+                email="admin@example.com",
+                password_hash=hash_password("password123"),
+                role_id=role.id,
+                is_active=True,
+            )
+            session.add(user)
+            await session.commit()
+
+    _run(_create())
 
 
 def _create_viewer():
-    session = SessionLocal()
-    try:
-        role = session.query(Role).filter(Role.name == "viewer").first()
-        user = User(
-            name="Viewer",
-            email="viewer@example.com",
-            password_hash=hash_password("password123"),
-            role_id=role.id,
-            is_active=True,
-        )
-        session.add(user)
-        session.commit()
-    finally:
-        session.close()
+    async def _create():
+        async with SessionLocal() as session:
+            role_result = await session.execute(select(Role).where(Role.name == "viewer"))
+            role = role_result.scalar_one()
+            user = User(
+                name="Viewer",
+                email="viewer@example.com",
+                password_hash=hash_password("password123"),
+                role_id=role.id,
+                is_active=True,
+            )
+            session.add(user)
+            await session.commit()
+
+    _run(_create())
 
 
 def _login(client, email: str) -> str:

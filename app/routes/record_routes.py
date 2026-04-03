@@ -1,7 +1,7 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user
 from app.core.role_checker import require_roles
@@ -16,8 +16,12 @@ router = APIRouter(prefix="/records", tags=["records"])
 
 
 @router.post("", dependencies=[Depends(require_roles("admin"))])
-def create_record(payload: RecordCreateRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    record = record_service.create_record(payload, current_user.id, db)
+async def create_record(
+    payload: RecordCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = await record_service.create_record(payload, current_user.id, db)
     return success_response(
         "Record created successfully",
         {
@@ -35,7 +39,7 @@ def create_record(payload: RecordCreateRequest, db: Session = Depends(get_db), c
 
 
 @router.get("", dependencies=[Depends(require_roles("admin", "analyst"))])
-def list_records(
+async def list_records(
     type: RecordType | None = Query(default=None),
     category: str | None = Query(default=None),
     start_date: date | None = Query(default=None),
@@ -43,7 +47,7 @@ def list_records(
     notes: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=10, ge=1, le=100),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     filters = RecordListQuery(
         type=type,
@@ -54,7 +58,7 @@ def list_records(
         page=page,
         page_size=page_size,
     )
-    result = record_service.list_records(filters, db)
+    result = await record_service.list_records(filters, db)
     data = {
         "items": [
             {
@@ -75,8 +79,8 @@ def list_records(
 
 
 @router.get("/{record_id}", dependencies=[Depends(require_roles("admin", "analyst"))])
-def get_record(record_id: int, db: Session = Depends(get_db)):
-    record = record_service.get_record_or_404(record_id, db)
+async def get_record(record_id: int, db: AsyncSession = Depends(get_db)):
+    record = await record_service.get_record_or_404(record_id, db)
     return success_response(
         "Record fetched successfully",
         {
@@ -93,8 +97,8 @@ def get_record(record_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{record_id}", dependencies=[Depends(require_roles("admin"))])
-def update_record(record_id: int, payload: RecordUpdateRequest, db: Session = Depends(get_db)):
-    record = record_service.update_record(record_id, payload, db)
+async def update_record(record_id: int, payload: RecordUpdateRequest, db: AsyncSession = Depends(get_db)):
+    record = await record_service.update_record(record_id, payload, db)
     return success_response(
         "Record updated successfully",
         {
@@ -111,6 +115,6 @@ def update_record(record_id: int, payload: RecordUpdateRequest, db: Session = De
 
 
 @router.delete("/{record_id}", dependencies=[Depends(require_roles("admin"))])
-def delete_record(record_id: int, db: Session = Depends(get_db)):
-    record_service.soft_delete_record(record_id, db)
+async def delete_record(record_id: int, db: AsyncSession = Depends(get_db)):
+    await record_service.soft_delete_record(record_id, db)
     return success_response("Record deleted successfully", None)

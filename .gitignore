@@ -54,6 +54,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# Local backup folders
+app_sync_backup/
+
 # IDE
 .vscode/
 .idea/

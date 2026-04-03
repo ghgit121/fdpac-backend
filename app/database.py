@@ -1,5 +1,5 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
 
 from app.config import settings
 
@@ -8,25 +8,18 @@ class Base(DeclarativeBase):
     pass
 
 
-engine = create_engine(
-    settings.database_url, 
-    pool_pre_ping=True, 
-    pool_size=10, 
-    max_overflow=20,
-    connect_args={
-        "keepalives": 1, 
-        "keepalives_idle": 30, 
-        "keepalives_interval": 10, 
-        "keepalives_count": 5,
-        "sslmode": "require",
-    }
+engine = create_async_engine(settings.async_database_url, pool_pre_ping=True)
+AsyncSessionLocal = async_sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,
 )
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Backward-compatible alias used by some tests/helpers.
+SessionLocal = AsyncSessionLocal
 
 
-def get_db():
-    db = SessionLocal()
-    try:
+async def get_db():
+    async with AsyncSessionLocal() as db:
         yield db
-    finally:
-        db.close()
