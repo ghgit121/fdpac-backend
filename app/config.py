@@ -1,5 +1,6 @@
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -48,7 +49,21 @@ class Settings(BaseSettings):
     app_name: str = "Finance Data Processing and Access Control Dashboard"
     api_prefix: str = "/api/v1"
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/fdpac"
-    jwt_secret: str = "change-me"
+
+    # Optional separate URL for Alembic DDL migrations.
+    # Required when DATABASE_URL points at Supabase's transaction pooler
+    # (port 6543), which does NOT support DDL.  Set this to the session-pooler
+    # URL (port 5432, same host) or the direct-connection URL instead.
+    migration_database_url: str = Field(
+        default="",
+        validation_alias="MIGRATION_DATABASE_URL",
+    )
+
+    # Accept JWT_SECRET (preferred) or SECRET_KEY (legacy/Render convention).
+    jwt_secret: str = Field(
+        default="change-me",
+        validation_alias=AliasChoices("JWT_SECRET", "SECRET_KEY"),
+    )
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 24 * 60
     cors_origins: str = "http://localhost:3000"
@@ -61,6 +76,18 @@ class Settings(BaseSettings):
     @property
     def sync_database_url(self) -> str:
         return _normalize_database_url(self.database_url, async_mode=False)
+
+    @property
+    def sync_migration_url(self) -> str:
+        """Sync (psycopg2) URL used exclusively by Alembic.
+
+        Falls back to sync_database_url when MIGRATION_DATABASE_URL is not
+        set.  If DATABASE_URL points at Supabase's transaction pooler
+        (port 6543), MIGRATION_DATABASE_URL must be set to the session-pooler
+        (port 5432) or direct-connection URL to avoid DDL failures.
+        """
+        raw = self.migration_database_url.strip() or self.database_url
+        return _normalize_database_url(raw, async_mode=False)
 
     model_config = SettingsConfigDict(
         env_file=".env",

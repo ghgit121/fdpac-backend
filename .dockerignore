@@ -4,3 +4,6 @@ __pycache__/
 .mypy_cache/
 .env
 tests/
+app_sync_backup/
+.venv/
+*.egg-info/

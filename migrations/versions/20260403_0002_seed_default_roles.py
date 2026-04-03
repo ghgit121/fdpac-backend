@@ -17,31 +17,17 @@ depends_on = None
 
 
 def upgrade() -> None:
-    """Seed default roles into the roles table."""
-    roles_table = sa.table(
-        'roles',
-        sa.column('name', sa.String),
-        sa.column('description', sa.String),
-    )
-    
-    op.bulk_insert(
-        roles_table,
-        [
-            {
-                'name': 'viewer',
-                'description': 'Can only view dashboard data'
-            },
-            {
-                'name': 'analyst',
-                'description': 'Can view records and dashboard insights'
-            },
-            {
-                'name': 'admin',
-                'description': 'Can manage users and full record CRUD'
-            },
-        ],
-        multiinsert=False,
-    )
+    """Ensure default roles exist (idempotent — safe to run on any database state)."""
+    # Migration 0001 already seeds these roles, but may not have run on older
+    # databases.  Using ON CONFLICT DO NOTHING makes this migration safe to apply
+    # regardless of whether the rows already exist.
+    op.execute(sa.text("""
+        INSERT INTO roles (name, description) VALUES
+        ('viewer',  'Can only view dashboard data'),
+        ('analyst', 'Can view records and dashboard insights'),
+        ('admin',   'Can manage users and full record CRUD')
+        ON CONFLICT (name) DO NOTHING;
+    """))
 
 
 def downgrade() -> None:

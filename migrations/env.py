@@ -9,13 +9,21 @@ from app.database import Base
 from app.models import financial_record, role, user  # noqa: F401
 
 config = context.config
-database_url = settings.sync_database_url
+# Use MIGRATION_DATABASE_URL when set (required if DATABASE_URL points at
+# Supabase's transaction pooler on port 6543, which does not support DDL).
+database_url = settings.sync_migration_url
 # Alembic uses ConfigParser internally, so literal '%' in URL-encoded passwords
 # must be escaped when writing into config options.
 config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
-# Log connection attempt for debugging
-print(f"[Alembic] Attempting database connection with {10}s timeout...", file=sys.stderr)
+# Log which URL is being used (host only, no credentials)
+try:
+    from urllib.parse import urlparse as _urlparse
+    _parsed = _urlparse(database_url)
+    print(f"[Alembic] Connecting to {_parsed.hostname}:{_parsed.port}/{_parsed.path.lstrip('/')}", file=sys.stderr)
+except Exception:
+    pass
+print(f"[Alembic] Attempting database connection with 10s timeout...", file=sys.stderr)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
