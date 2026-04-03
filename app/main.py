@@ -135,12 +135,13 @@ def create_app() -> FastAPI:
     @app.get("/health/readiness")
     async def readiness_check():
         db_health = await _database_health_snapshot()
-        ready = db_health["status"] == "up" and db_health["default_roles_ready"]
+        # Only check if database is reachable; roles will be auto-created on first user registration
+        ready = db_health["status"] == "up"
         return JSONResponse(
             status_code=status.HTTP_200_OK if ready else status.HTTP_503_SERVICE_UNAVAILABLE,
             content={
                 "success": ready,
-                "message": "ready" if ready else "not ready",
+                "message": "ready" if ready else "database unavailable",
                 "data": {
                     "database": db_health,
                 },
