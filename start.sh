@@ -25,21 +25,32 @@ fi
 echo "[INFO] JWT secret is set"
 
 echo ""
-if [ -n "$MIGRATION_DATABASE_URL" ]; then
+if [ "$SKIP_MIGRATIONS" = "true" ]; then
+    echo "[MIGRATIONS] SKIP_MIGRATIONS=true — skipping migrations."
+    echo "[MIGRATIONS] Run 'alembic upgrade head' manually against the direct connection URL."
+elif [ -n "$MIGRATION_DATABASE_URL" ]; then
     echo "[MIGRATIONS] Using MIGRATION_DATABASE_URL for DDL (session/direct pooler)."
+    echo "[MIGRATIONS] Starting database migrations with 60s timeout..."
+    if timeout 60 alembic upgrade head; then
+        echo "[MIGRATIONS] Migrations completed successfully!"
+    else
+        echo "[ERROR] Migrations failed or timed out after 60s!"
+        echo "[HINT] Verify MIGRATION_DATABASE_URL is reachable (direct connection, not pooler)."
+        exit 1
+    fi
 else
     echo "[MIGRATIONS] MIGRATION_DATABASE_URL not set; using DATABASE_URL for migrations."
     echo "[MIGRATIONS] WARNING: if DATABASE_URL uses Supabase transaction pooler (port 6543)"
-    echo "[MIGRATIONS]          set MIGRATION_DATABASE_URL to the session pooler (port 5432)"
-    echo "[MIGRATIONS]          or direct connection URL to avoid DDL failures."
-fi
-echo "[MIGRATIONS] Starting database migrations with 60s timeout..."
-if timeout 60 alembic upgrade head; then
-    echo "[MIGRATIONS] Migrations completed successfully!"
-else
-    echo "[ERROR] Migrations failed or timed out after 60s!"
-    echo "[HINT] Verify DATABASE_URL is reachable and uses sslmode=require for Supabase."
-    exit 1
+    echo "[MIGRATIONS]          set MIGRATION_DATABASE_URL to the direct connection URL"
+    echo "[MIGRATIONS]          or set SKIP_MIGRATIONS=true and run migrations manually."
+    echo "[MIGRATIONS] Starting database migrations with 60s timeout..."
+    if timeout 60 alembic upgrade head; then
+        echo "[MIGRATIONS] Migrations completed successfully!"
+    else
+        echo "[ERROR] Migrations failed or timed out after 60s!"
+        echo "[HINT] Verify DATABASE_URL is reachable and uses sslmode=require for Supabase."
+        exit 1
+    fi
 fi
 
 echo ""
