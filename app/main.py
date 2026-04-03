@@ -81,7 +81,6 @@ def create_app() -> FastAPI:
 
     return app
 
-
-Base.metadata.create_all(bind=engine)
-seed_roles()
+# Removing synchronous blocking database calls here so Uvicorn can start quickly and bind the port.
+# You will use Alembic to run migrations instead.
 app = create_app()
