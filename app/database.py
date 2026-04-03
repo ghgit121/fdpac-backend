@@ -13,7 +13,13 @@ engine = create_engine(
     pool_pre_ping=True, 
     pool_size=10, 
     max_overflow=20,
-    connect_args={"keepalives": 1, "keepalives_idle": 30, "keepalives_interval": 10, "keepalives_count": 5}
+    connect_args={
+        "keepalives": 1, 
+        "keepalives_idle": 30, 
+        "keepalives_interval": 10, 
+        "keepalives_count": 5,
+        "sslmode": "require",
+    }
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
