@@ -40,6 +40,10 @@ def run_migrations_online() -> None:
     configuration["sqlalchemy.url"] = database_url
 
     try:
+        # For psycopg2, add connect_timeout to the configuration
+        # This prevents indefinite hangs on unreachable databases
+        configuration["sqlalchemy.connect_args"] = {"connect_timeout": 10}
+        
         connectable = engine_from_config(
             configuration,
             prefix="sqlalchemy.",
