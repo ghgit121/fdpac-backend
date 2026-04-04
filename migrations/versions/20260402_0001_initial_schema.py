@@ -7,15 +7,14 @@ Create Date: 2026-04-02 00:00:00
 
 from alembic import op
 import sqlalchemy as sa
-
+from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 
 revision = "20260402_0001"
 down_revision = None
 branch_labels = None
 depends_on = None
 
-
-record_type_enum = sa.Enum("income", "expense", name="recordtype", create_type=False)
+record_type_enum = PGEnum("income", "expense", name="recordtype", create_type=False)
 
 
 def upgrade() -> None:

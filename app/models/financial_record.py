@@ -1,16 +1,16 @@
 from datetime import date, datetime
 from enum import Enum
 
-from sqlalchemy import Date, DateTime, Enum as SQLEnum, Float, ForeignKey, String, Text, func
+from sqlalchemy import Date, DateTime, Float, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 
 
 class RecordType(str, Enum):
     income = "income"
     expense = "expense"
-
 
 class FinancialRecord(Base):
     __tablename__ = "financial_records"
@@ -18,7 +18,7 @@ class FinancialRecord(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     amount: Mapped[float] = mapped_column(Float, nullable=False)
     type: Mapped[RecordType] = mapped_column(
-        SQLEnum(RecordType, name="recordtype", create_type=False),
+        PGEnum(RecordType, name="recordtype", create_type=False),
         nullable=False,
         index=True,
     )
