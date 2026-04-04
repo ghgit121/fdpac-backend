@@ -58,7 +58,7 @@ def run_migrations_online() -> None:
             poolclass=pool.NullPool,
         )
 
-        with connectable.connect() as connection:
+        with connectable.connect().execution_options(isolation_level="AUTOCOMMIT") as connection:
             # Test connectivity
             connection.execute(text("SELECT 1"))
             print("[Alembic] Direct connection established successfully.", file=sys.stderr)
@@ -66,8 +66,6 @@ def run_migrations_online() -> None:
             context.configure(
                 connection=connection, 
                 target_metadata=target_metadata,
-                # Ensure we handle Neon DB's transaction pooler issues if accidentally used
-                execution_options={"isolation_level": "AUTOCOMMIT"}
             )
 
             with context.begin_transaction():
