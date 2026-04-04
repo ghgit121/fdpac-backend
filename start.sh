@@ -32,33 +32,35 @@ echo ""
 # ---------- Migrations ----------
 if [ "$SKIP_MIGRATIONS" = "true" ]; then
     echo "[MIGRATIONS] SKIP_MIGRATIONS=true — skipping migrations."
-    echo "[MIGRATIONS] Run 'alembic upgrade head' manually against the direct connection URL."
+    echo "[MIGRATIONS] Run 'alembic upgrade head' manually."
 
 elif [ -n "$MIGRATION_DATABASE_URL" ]; then
-    echo "[MIGRATIONS] Using MIGRATION_DATABASE_URL for DDL (session/direct pooler)."
-    echo "[MIGRATIONS] Starting database migrations with 60s timeout..."
-
-    # Run alembic with a timeout; if it hangs or fails, exit non-zero
+    echo "[MIGRATIONS] Starting DDL migrations using MIGRATION_DATABASE_URL..."
+    
     if timeout 60 alembic upgrade head; then
-        echo "[MIGRATIONS] Migrations completed successfully!"
+        echo "[MIGRATIONS] Success: Database schema is up to date."
     else
-        echo "[ERROR] Migrations failed or timed out after 60s!"
-        echo "[HINT] Verify MIGRATION_DATABASE_URL is reachable (direct connection, not pooler)."
+        echo "[ERROR] Migrations failed or timed out (60s limit)."
+        echo "[HINT] Ensure MIGRATION_DATABASE_URL is a 'Direct' connection (e.g. port 5432, not 6543)."
         exit 1
     fi
 
 else
-    echo "[MIGRATIONS] MIGRATION_DATABASE_URL not set; using DATABASE_URL for migrations."
-    echo "[MIGRATIONS] WARNING: if DATABASE_URL uses Supabase transaction pooler (port 6543)"
-    echo "[MIGRATIONS]          set MIGRATION_DATABASE_URL to the direct connection URL"
-    echo "[MIGRATIONS]          or set SKIP_MIGRATIONS=true and run migrations manually."
-    echo "[MIGRATIONS] Starting database migrations with 60s timeout..."
+    echo "[MIGRATIONS] MIGRATION_DATABASE_URL not set; trying DATABASE_URL..."
+    
+    # Check if DATABASE_URL looks like a pooler (common in Neon/Supabase)
+    case "$DATABASE_URL" in 
+        *pooler*|*:6543*)
+            echo "[WARNING] DATABASE_URL appears to be a pooler. DDL might fail."
+            echo "[WARNING] Set MIGRATION_DATABASE_URL to a direct connection URL for stability."
+            ;;
+    esac
 
     if timeout 60 alembic upgrade head; then
-        echo "[MIGRATIONS] Migrations completed successfully!"
+        echo "[MIGRATIONS] Success: Database schema is up to date."
     else
-        echo "[ERROR] Migrations failed or timed out after 60s!"
-        echo "[HINT] Verify DATABASE_URL is reachable and uses sslmode=require for Supabase."
+        echo "[ERROR] Migrations failed or timed out (60s limit)."
+        echo "[HINT] If using Neon/Supabase, set MIGRATION_DATABASE_URL to the direct connection URL."
         exit 1
     fi
 fi

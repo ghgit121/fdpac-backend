@@ -61,19 +61,24 @@ def run_migrations_online() -> None:
         with connectable.connect() as connection:
             # Test connectivity
             connection.execute(text("SELECT 1"))
-            print("[Alembic] Database connection successful!", file=sys.stderr)
+            print("[Alembic] Direct connection established successfully.", file=sys.stderr)
             
-            context.configure(connection=connection, target_metadata=target_metadata)
+            context.configure(
+                connection=connection, 
+                target_metadata=target_metadata,
+                # Ensure we handle Neon DB's transaction pooler issues if accidentally used
+                execution_options={"isolation_level": "AUTOCOMMIT"}
+            )
 
             with context.begin_transaction():
                 context.run_migrations()
-            print("[Alembic] Migrations completed successfully!", file=sys.stderr)
+            print("[Alembic] Migrations completed and transaction committed.", file=sys.stderr)
     except Exception as e:
-        print(f"[Alembic ERROR] Failed to connect to database or run migrations: {e}", file=sys.stderr)
-        print(
-            f"[Alembic INFO] Database URL (first 50 chars): {database_url[:50]}...",
-            file=sys.stderr,
-        )
+        print(f"[Alembic CRITICAL] Execution failed: {e}", file=sys.stderr)
+        if "relation" in str(e) and "already exists" in str(e):
+            print("[HINT] Database schema might be partially migrated. Check MIGRATION_DATABASE_URL.", file=sys.stderr)
+        elif "connection" in str(e).lower():
+            print("[HINT] Verify MIGRATION_DATABASE_URL is a 'Direct Connection' string, not a pooler.", file=sys.stderr)
         raise
 
 

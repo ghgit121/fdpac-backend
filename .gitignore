@@ -69,3 +69,6 @@ app_sync_backup/
 # OS
 .DS_Store
 Thumbs.db
+
+*.txt
+out.txt

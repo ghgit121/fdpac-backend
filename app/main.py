@@ -45,8 +45,10 @@ async def lifespan(app: FastAPI):
         await seed_roles()
         logger.info("Default roles seeded successfully.")
     except Exception as exc:
-        # Log but don't crash — migrations may have already created them.
-        logger.warning("Role seeding skipped (non-fatal): %s", exc)
+        if "UndefinedTableError" in str(exc) or "relation" in str(exc) and "does not exist" in str(exc):
+            logger.critical("[CRITICAL] Tables missing. Ensure MIGRATION_DATABASE_URL matches DATABASE_URL. Run migrations.")
+        else:
+            logger.warning("Role seeding skipped (non-fatal): %s", exc)
     yield
 
 
@@ -116,6 +118,16 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(SQLAlchemyError)
     async def db_exception_handler(_: Request, exc: SQLAlchemyError):
+        if "UndefinedTableError" in str(exc.__cause__) or ("relation" in str(exc) and "does not exist" in str(exc)):
+            logger.critical("Database tables missing (UndefinedTableError). Run Alembic! Error: %s", exc)
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={
+                    "success": False, 
+                    "message": "Database tables missing. Ensure MIGRATION_DATABASE_URL matches DATABASE_URL and migrations are up-to-date."
+                }
+            )
+            
         logger.exception("Database operation failed", exc_info=exc)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

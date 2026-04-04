@@ -4,12 +4,33 @@ from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-def _normalize_ssl_query_for_asyncpg(database_url: str) -> str:
+def _inject_neon_security_params(database_url: str) -> str:
+    """Force channel_binding=require & sslmode=require for NeonDB compatibility."""
     parsed = urlparse(database_url)
+    if "neon.tech" not in str(parsed.hostname).lower():
+        # Fallback for Supabase asyncpg `ssl` quirk
+        if "postgresql+asyncpg" in database_url:
+            query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+            sslmode = query.pop("sslmode", None)
+            if sslmode and "ssl" not in query:
+                query["ssl"] = sslmode
+            return urlunparse(parsed._replace(query=urlencode(query)))
+        return database_url
+        
     query = dict(parse_qsl(parsed.query, keep_blank_values=True))
-    sslmode = query.pop("sslmode", None)
-    if sslmode and "ssl" not in query:
-        query["ssl"] = sslmode
+    
+    # Neon SNI / security defaults
+    if "sslmode" not in query and "ssl" not in query:
+        query["sslmode"] = "require"
+    if "channel_binding" not in query:
+        query["channel_binding"] = "require"
+        
+    # Asyncpg specific 'ssl' param resolution
+    if "postgresql+asyncpg" in database_url:
+        ssl_val = query.pop("sslmode", None) or query.get("ssl")
+        if ssl_val and "ssl" not in query:
+            query["ssl"] = ssl_val
+            
     return urlunparse(parsed._replace(query=urlencode(query)))
 
 
@@ -28,21 +49,20 @@ def _normalize_database_url(raw_url: str, async_mode: bool) -> str:
         elif database_url.startswith("sqlite://"):
             database_url = database_url.replace("sqlite://", "sqlite+aiosqlite://", 1)
 
-        if database_url.startswith("postgresql+asyncpg://"):
-            return _normalize_ssl_query_for_asyncpg(database_url)
-        return database_url
+        return _inject_neon_security_params(database_url)
 
     if database_url.startswith("postgresql+asyncpg://"):
-        return database_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://", 1)
-    if database_url.startswith("postgresql://"):
-        return database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
-    if database_url.startswith("postgres://"):
-        return database_url.replace("postgres://", "postgresql+psycopg2://", 1)
-    if database_url.startswith("sqlite+aiosqlite:///"):
-        return database_url.replace("sqlite+aiosqlite:///", "sqlite:///", 1)
-    if database_url.startswith("sqlite+aiosqlite://"):
-        return database_url.replace("sqlite+aiosqlite://", "sqlite://", 1)
-    return database_url
+        database_url = database_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://", 1)
+    elif database_url.startswith("postgresql://"):
+        database_url = database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    elif database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif database_url.startswith("sqlite+aiosqlite:///"):
+        database_url = database_url.replace("sqlite+aiosqlite:///", "sqlite:///", 1)
+    elif database_url.startswith("sqlite+aiosqlite://"):
+        database_url = database_url.replace("sqlite+aiosqlite://", "sqlite://", 1)
+        
+    return _inject_neon_security_params(database_url)
 
 
 class Settings(BaseSettings):
