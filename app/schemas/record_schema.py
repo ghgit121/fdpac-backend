@@ -29,7 +29,7 @@ class RecordResponse(BaseModel):
     amount: float
     type: RecordType
     category: str
-    date: date
+    date: dt_date
     notes: str | None
     created_by: int
     created_at: datetime

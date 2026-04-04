@@ -44,6 +44,8 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+*.db
+tests/test.db
 
 # Environments
 .env

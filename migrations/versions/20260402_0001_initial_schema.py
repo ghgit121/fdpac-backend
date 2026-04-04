@@ -47,7 +47,15 @@ def upgrade() -> None:
     op.create_index(op.f("ix_users_id"), "users", ["id"], unique=False)
     op.create_index(op.f("ix_users_role_id"), "users", ["role_id"], unique=False)
 
-    record_type_enum.create(op.get_bind(), checkfirst=True)
+    # Use raw SQL for idempotent enum creation — SQLAlchemy's checkfirst
+    # can still fail on some managed PostgreSQL providers (e.g. Supabase).
+    op.execute(sa.text(
+        "DO $$ BEGIN "
+        "IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'recordtype') THEN "
+        "CREATE TYPE recordtype AS ENUM ('income', 'expense'); "
+        "END IF; "
+        "END $$;"
+    ))
     op.create_table(
         "financial_records",
         sa.Column("id", sa.Integer(), nullable=False),

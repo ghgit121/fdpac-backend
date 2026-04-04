@@ -8,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import AsyncSessionLocal
@@ -64,9 +63,18 @@ async def _database_health_snapshot() -> dict:
 def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name)
 
+    # Normalize CORS origins — auto-prepend https:// if no scheme is present
+    def _normalize_origin(o: str) -> str:
+        o = o.strip()
+        if o and not o.startswith(("http://", "https://", "*")):
+            o = f"https://{o}"
+        return o
+
+    origins = [_normalize_origin(o) for o in settings.cors_origins.split(",") if o.strip()]
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()],
+        allow_origins=origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
