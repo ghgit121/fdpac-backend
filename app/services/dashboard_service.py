@@ -10,10 +10,33 @@ from app.services.record_service import sum_by_type
 async def get_summary(db: AsyncSession) -> dict:
     total_income = await sum_by_type(db, RecordType.income)
     total_expense = await sum_by_type(db, RecordType.expense)
+    
+    tx_count_res = await db.execute(select(func.count(FinancialRecord.id)).where(FinancialRecord.deleted_at.is_(None)))
+    tx_count = tx_count_res.scalar_one_or_none() or 0
+    
+    avg_expense_res = await db.execute(
+        select(func.avg(FinancialRecord.amount))
+        .where(FinancialRecord.deleted_at.is_(None), FinancialRecord.type == RecordType.expense)
+    )
+    avg_expense = float(avg_expense_res.scalar_one_or_none() or 0.0)
+    
+    highest_cat_res = await db.execute(
+        select(FinancialRecord.category, func.sum(FinancialRecord.amount).label("total"))
+        .where(FinancialRecord.deleted_at.is_(None), FinancialRecord.type == RecordType.expense)
+        .group_by(FinancialRecord.category)
+        .order_by(func.sum(FinancialRecord.amount).desc())
+        .limit(1)
+    )
+    highest_cat_row = highest_cat_res.first()
+    highest_expense_category = highest_cat_row.category if highest_cat_row else None
+
     return {
         "total_income": total_income,
         "total_expense": total_expense,
         "net_balance": total_income - total_expense,
+        "tx_count": tx_count,
+        "avg_expense": avg_expense,
+        "highest_expense_category": highest_expense_category,
     }
 
 
