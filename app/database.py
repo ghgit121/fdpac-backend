@@ -8,7 +8,14 @@ class Base(DeclarativeBase):
     pass
 
 
-engine = create_async_engine(settings.async_database_url, pool_pre_ping=True)
+engine = create_async_engine(
+    settings.async_database_url,
+    pool_pre_ping=True,
+    connect_args={
+        "statement_cache_size": 0,
+        "prepared_statement_cache_size": 0,
+    },
+)
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
