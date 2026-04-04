@@ -15,7 +15,7 @@ branch_labels = None
 depends_on = None
 
 
-record_type_enum = sa.Enum("income", "expense", name="recordtype")
+record_type_enum = sa.Enum("income", "expense", name="recordtype", create_type=False)
 
 
 def upgrade() -> None:

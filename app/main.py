@@ -1,5 +1,6 @@
 import logging
 import time
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, Request, status
@@ -23,6 +24,7 @@ APP_STARTED_PERF = time.perf_counter()
 
 
 async def seed_roles() -> None:
+    """Ensure the three default roles exist. Safe to call multiple times."""
     async with AsyncSessionLocal() as db:
         defaults = {
             "viewer": "Can only view dashboard data",
@@ -34,6 +36,19 @@ async def seed_roles() -> None:
             if not exists_result.scalar_one_or_none():
                 db.add(Role(name=role_name, description=description))
         await db.commit()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup / shutdown lifecycle hook."""
+    try:
+        await seed_roles()
+        logger.info("Default roles seeded successfully.")
+    except Exception as exc:
+        # Log but don't crash — migrations may have already created them.
+        logger.warning("Role seeding skipped (non-fatal): %s", exc)
+    yield
+
 
 async def _database_health_snapshot() -> dict:
     started = time.perf_counter()
@@ -61,7 +76,12 @@ async def _database_health_snapshot() -> dict:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title=settings.app_name)
+    app = FastAPI(
+        title=settings.app_name,
+        lifespan=lifespan,
+        docs_url="/docs",
+        redoc_url="/redoc",
+    )
 
     # Normalize CORS origins — auto-prepend https:// if no scheme is present
     def _normalize_origin(o: str) -> str:
@@ -110,6 +130,22 @@ def create_app() -> FastAPI:
             content={"success": False, "message": "Internal server error"},
         )
 
+    # ── Root endpoint ─────────────────────────────────────────────────
+    @app.get("/")
+    async def root():
+        return {
+            "success": True,
+            "message": "FDPAC Backend API is running",
+            "data": {
+                "name": settings.app_name,
+                "version": "1.0.0",
+                "docs": "/docs",
+                "health": "/health",
+                "api_prefix": settings.api_prefix,
+            },
+        }
+
+    # ── Health endpoints ──────────────────────────────────────────────
     @app.get("/health")
     async def health_check():
         check_started = time.perf_counter()
@@ -143,7 +179,6 @@ def create_app() -> FastAPI:
     @app.get("/health/readiness")
     async def readiness_check():
         db_health = await _database_health_snapshot()
-        # Only check if database is reachable; roles will be auto-created on first user registration
         ready = db_health["status"] == "up"
         return JSONResponse(
             status_code=status.HTTP_200_OK if ready else status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -156,6 +191,7 @@ def create_app() -> FastAPI:
             },
         )
 
+    # ── API routers ───────────────────────────────────────────────────
     app.include_router(auth_router, prefix=settings.api_prefix)
     app.include_router(user_router, prefix=settings.api_prefix)
     app.include_router(record_router, prefix=settings.api_prefix)
@@ -163,6 +199,5 @@ def create_app() -> FastAPI:
 
     return app
 
-# Removing synchronous blocking database calls here so Uvicorn can start quickly and bind the port.
-# You will use Alembic to run migrations instead.
+
 app = create_app()

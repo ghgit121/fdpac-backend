@@ -17,7 +17,11 @@ class FinancialRecord(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     amount: Mapped[float] = mapped_column(Float, nullable=False)
-    type: Mapped[RecordType] = mapped_column(SQLEnum(RecordType), nullable=False, index=True)
+    type: Mapped[RecordType] = mapped_column(
+        SQLEnum(RecordType, name="recordtype", create_type=False),
+        nullable=False,
+        index=True,
+    )
     category: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
     date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

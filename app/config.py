@@ -66,7 +66,7 @@ class Settings(BaseSettings):
     )
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 24 * 60
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = "http://localhost:3000,https://fdpac-frontend.vercel.app"
     rate_limit_per_minute: int = 60
 
     @property

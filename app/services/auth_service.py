@@ -51,4 +51,11 @@ async def login_user(payload: LoginRequest, db: AsyncSession) -> dict:
         "access_token": token,
         "token_type": "bearer",
         "expires_in_minutes": 24 * 60,
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role.name,
+            "is_active": user.is_active,
+        },
     }
