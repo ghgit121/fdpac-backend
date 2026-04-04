@@ -14,6 +14,8 @@ if "prepared_statement_cache_size" not in db_url:
     separator = "&" if "?" in db_url else "?"
     db_url += f"{separator}prepared_statement_cache_size=0"
 
+from sqlalchemy import event
+
 engine = create_async_engine(
     db_url,
     pool_pre_ping=True,
@@ -21,6 +23,12 @@ engine = create_async_engine(
         "statement_cache_size": 0,
     },
 )
+
+# Patch for SQLAlchemy 2.0.41 + asyncpg 0.30.0 incompatibility
+@event.listens_for(engine.sync_engine, "do_connect")
+def receive_do_connect(dialect, conn_rec, cargs, cparams):
+    cparams.pop("channel_binding", None)
+
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
