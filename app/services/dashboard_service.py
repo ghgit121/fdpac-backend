@@ -11,12 +11,9 @@ from app.services.record_service import sum_by_type
 
 
 def _get_base_query(current_user: User, *columns):
-    is_viewer = current_user.role.name == 'viewer'
     # Start with base query selecting columns or full entity
     query = select(*columns) if columns else select(FinancialRecord)
     query = query.where(FinancialRecord.deleted_at.is_(None))
-    if is_viewer:
-        query = query.where(FinancialRecord.created_by == current_user.id)
     return query
 
 async def get_summary(db: AsyncSession, current_user: User) -> dict:
