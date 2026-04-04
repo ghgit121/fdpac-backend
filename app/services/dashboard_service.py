@@ -166,7 +166,7 @@ async def get_admin_insights(db: AsyncSession) -> dict:
             "type": r.type.value,
             "category": r.category,
             "description": r.notes,
-            "date": r.date
+            "date": r.date.isoformat() if hasattr(r.date, 'isoformat') else str(r.date)
         }
 
     return {
