@@ -7,14 +7,13 @@ Create Date: 2026-04-02 00:00:00
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import ENUM as PGEnum
+
 
 revision = "20260402_0001"
 down_revision = None
 branch_labels = None
 depends_on = None
 
-record_type_enum = PGEnum("income", "expense", name="recordtype", create_type=False)
 
 
 def upgrade() -> None:
@@ -59,7 +58,7 @@ def upgrade() -> None:
         "financial_records",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("amount", sa.Float(), nullable=False),
-        sa.Column("type", record_type_enum, nullable=False),
+        sa.Column("type", sa.String(), nullable=False),
         sa.Column("category", sa.String(length=80), nullable=False),
         sa.Column("date", sa.Date(), nullable=False),
         sa.Column("notes", sa.Text(), nullable=True),
@@ -74,7 +73,9 @@ def upgrade() -> None:
     op.create_index(op.f("ix_financial_records_date"), "financial_records", ["date"], unique=False)
     op.create_index(op.f("ix_financial_records_id"), "financial_records", ["id"], unique=False)
     op.create_index(op.f("ix_financial_records_type"), "financial_records", ["type"], unique=False)
-
+    
+    op.execute("ALTER TABLE financial_records ALTER COLUMN type TYPE recordtype USING type::recordtype;")
+    
     op.execute(
         """
         INSERT INTO roles (name, description) VALUES
@@ -103,4 +104,4 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_roles_id"), table_name="roles")
     op.drop_table("roles")
 
-    record_type_enum.drop(op.get_bind(), checkfirst=True)
+    op.execute("DROP TYPE IF EXISTS recordtype;")
