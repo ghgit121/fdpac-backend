@@ -8,13 +8,15 @@ class Base(DeclarativeBase):
     pass
 
 
+# Append required asyncpg query parameters to disable prepared statement caching for PgBouncer
+db_url = settings.async_database_url
+if "prepared_statement_cache_size" not in db_url:
+    separator = "&" if "?" in db_url else "?"
+    db_url += f"{separator}prepared_statement_cache_size=0&statement_cache_size=0"
+
 engine = create_async_engine(
-    settings.async_database_url,
+    db_url,
     pool_pre_ping=True,
-    prepared_statement_cache_size=0,
-    connect_args={
-        "statement_cache_size": 0,
-    },
 )
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
