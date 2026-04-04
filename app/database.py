@@ -8,15 +8,18 @@ class Base(DeclarativeBase):
     pass
 
 
-# Append required asyncpg query parameters to disable prepared statement caching for PgBouncer
+# Append prepared_statement_cache_size to URL so SQLAlchemy's dialect uses it
 db_url = settings.async_database_url
 if "prepared_statement_cache_size" not in db_url:
     separator = "&" if "?" in db_url else "?"
-    db_url += f"{separator}prepared_statement_cache_size=0&statement_cache_size=0"
+    db_url += f"{separator}prepared_statement_cache_size=0"
 
 engine = create_async_engine(
     db_url,
     pool_pre_ping=True,
+    connect_args={
+        "statement_cache_size": 0,
+    },
 )
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
