@@ -24,6 +24,11 @@ async def monthly_trends(db: AsyncSession = Depends(get_db)):
     return success_response("Monthly trends fetched", await dashboard_service.get_monthly_trends(db))
 
 
+@router.get("/weekly-trends", dependencies=[Depends(require_roles("viewer", "analyst", "admin"))])
+async def weekly_trends(db: AsyncSession = Depends(get_db)):
+    return success_response("Weekly trends fetched", await dashboard_service.get_weekly_trends(db))
+
+
 @router.get("/recent-activity", dependencies=[Depends(require_roles("viewer", "analyst", "admin"))])
 async def recent_activity(db: AsyncSession = Depends(get_db)):
     records = await dashboard_service.get_recent_activity(db)

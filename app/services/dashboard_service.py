@@ -52,6 +52,30 @@ async def get_monthly_trends(db: AsyncSession) -> list[dict]:
     return results
 
 
+async def get_weekly_trends(db: AsyncSession) -> list[dict]:
+    rows = await db.execute(
+        select(FinancialRecord.date, FinancialRecord.type, FinancialRecord.amount).where(
+            FinancialRecord.deleted_at.is_(None)
+        )
+    )
+    trends = defaultdict(lambda: {"income": 0.0, "expense": 0.0})
+    for row in rows.all():
+        # ISO calendar gives (year, week, weekday)
+        iso_year, iso_week, _ = row.date.isocalendar()
+        key = f"{iso_year}-W{iso_week:02d}"
+        bucket = trends[key]
+        if row.type == RecordType.income:
+            bucket["income"] += float(row.amount)
+        else:
+            bucket["expense"] += float(row.amount)
+
+    results = []
+    for week in sorted(trends.keys()):
+        values = trends[week]
+        results.append({"week": week, "income": values["income"], "expense": values["expense"]})
+    return results
+
+
 async def get_recent_activity(db: AsyncSession) -> list[FinancialRecord]:
     result = await db.execute(
         select(FinancialRecord)
