@@ -26,10 +26,24 @@ Error responses:
 
 ---
 
+## Base Endpoints
+
+### Root URL
+- **Endpoint**: `GET /`
+- **Authentication**: Not required
+- **Description**: Verifies backend root resolution.
+- **Response** (200 OK):
+  ```json
+  {
+    "success": true,
+    "message": "Welcome to FDPAC Backend API"
+  }
+  ```
+
 ## Authentication Endpoints
 
 ### Register User
-- **Endpoint**: `POST /auth/register`
+- **Endpoint**: `POST /api/v1/auth/register`
 - **Authentication**: Not required
 - **Rate Limit**: 5 requests/minute
 - **Role Required**: None
@@ -64,7 +78,7 @@ Error responses:
   - `500 Internal Server Error`: Default role missing (system configuration error)
 
 ### Login User
-- **Endpoint**: `POST /auth/login`
+- **Endpoint**: `POST /api/v1/auth/login`
 - **Authentication**: Not required
 - **Rate Limit**: 5 requests/minute
 - **Role Required**: None
@@ -96,7 +110,7 @@ Error responses:
   - `400 Bad Request`: Invalid input format
 
 ### Get Current User
-- **Endpoint**: `GET /auth/me`
+- **Endpoint**: `GET /api/v1/auth/me`
 - **Authentication**: Required (JWT Bearer token)
 - **Role Required**: None (all authenticated users)
 - **Request**: No body
@@ -123,7 +137,7 @@ Error responses:
 ## User Management Endpoints
 
 ### Create User
-- **Endpoint**: `POST /users`
+- **Endpoint**: `POST /api/v1/users`
 - **Authentication**: Required
 - **Role Required**: `admin`
 - **Request Body**:
@@ -160,7 +174,7 @@ Error responses:
   - `401 Unauthorized`: Invalid token
 
 ### List Users
-- **Endpoint**: `GET /users`
+- **Endpoint**: `GET /api/v1/users`
 - **Authentication**: Required
 - **Role Required**: `admin`
 - **Query Parameters**: None
@@ -194,7 +208,7 @@ Error responses:
   - `401 Unauthorized`: Invalid token
 
 ### Get User by ID
-- **Endpoint**: `GET /users/{user_id}`
+- **Endpoint**: `GET /api/v1/users/{user_id}`
 - **Authentication**: Required
 - **Role Required**: `admin`
 - **Path Parameters**:
@@ -220,7 +234,7 @@ Error responses:
   - `401 Unauthorized`: Invalid token
 
 ### Update User
-- **Endpoint**: `PUT /users/{user_id}`
+- **Endpoint**: `PUT /api/v1/users/{user_id}`
 - **Authentication**: Required
 - **Role Required**: `admin`
 - **Path Parameters**:
@@ -261,7 +275,7 @@ Error responses:
   - `401 Unauthorized`: Invalid token
 
 ### Update User Status
-- **Endpoint**: `PATCH /users/{user_id}/status`
+- **Endpoint**: `PATCH /api/v1/users/{user_id}/status`
 - **Authentication**: Required
 - **Role Required**: `admin`
 - **Path Parameters**:
@@ -293,7 +307,7 @@ Error responses:
   - `401 Unauthorized`: Invalid token
 
 ### Delete User
-- **Endpoint**: `DELETE /users/{user_id}`
+- **Endpoint**: `DELETE /api/v1/users/{user_id}`
 - **Authentication**: Required
 - **Role Required**: `admin`
 - **Path Parameters**:
@@ -316,7 +330,7 @@ Error responses:
 ## Financial Records Endpoints
 
 ### Create Record
-- **Endpoint**: `POST /records`
+- **Endpoint**: `POST /api/v1/records`
 - **Authentication**: Required
 - **Role Required**: `admin`
 - **Request Body**:
@@ -358,7 +372,7 @@ Error responses:
   - `401 Unauthorized`: Invalid token
 
 ### List Records
-- **Endpoint**: `GET /records`
+- **Endpoint**: `GET /api/v1/records`
 - **Authentication**: Required
 - **Role Required**: `admin`, `analyst`
 - **Query Parameters**:
@@ -407,17 +421,17 @@ Error responses:
   }
   ```
 - **Example Queries**:
-  - Filter by income: `GET /records?type=income`
-  - Filter by date range: `GET /records?start_date=2026-03-01&end_date=2026-03-31`
-  - Search notes: `GET /records?notes=salary&page=1&page_size=20`
-  - Pagination: `GET /records?page=2&page_size=10`
+  - Filter by income: `GET /api/v1/records?type=income`
+  - Filter by date range: `GET /api/v1/records?start_date=2026-03-01&end_date=2026-03-31`
+  - Search notes: `GET /api/v1/records?notes=salary&page=1&page_size=20`
+  - Pagination: `GET /api/v1/records?page=2&page_size=10`
 - **Error Cases**:
   - `403 Forbidden`: Not admin/analyst
   - `401 Unauthorized`: Invalid token
   - `400 Bad Request`: Invalid date format or filter values
 
 ### Get Record by ID
-- **Endpoint**: `GET /records/{record_id}`
+- **Endpoint**: `GET /api/v1/records/{record_id}`
 - **Authentication**: Required
 - **Role Required**: `admin`, `analyst`
 - **Path Parameters**:
@@ -445,7 +459,7 @@ Error responses:
   - `401 Unauthorized`: Invalid token
 
 ### Update Record
-- **Endpoint**: `PUT /records/{record_id}`
+- **Endpoint**: `PUT /api/v1/records/{record_id}`
 - **Authentication**: Required
 - **Role Required**: `admin`
 - **Path Parameters**:
@@ -485,7 +499,7 @@ Error responses:
   - `401 Unauthorized`: Invalid token
 
 ### Delete Record
-- **Endpoint**: `DELETE /records/{record_id}`
+- **Endpoint**: `DELETE /api/v1/records/{record_id}`
 - **Authentication**: Required
 - **Role Required**: `admin`
 - **Path Parameters**:
@@ -509,7 +523,7 @@ Error responses:
 ## Dashboard Endpoints
 
 ### Dashboard Summary
-- **Endpoint**: `GET /dashboard/summary`
+- **Endpoint**: `GET /api/v1/dashboard/summary`
 - **Authentication**: Required
 - **Role Required**: `viewer`, `analyst`, `admin`
 - **Description**: Returns total income, expenses, and net balance
@@ -530,7 +544,7 @@ Error responses:
   - `401 Unauthorized`: Invalid token
 
 ### Category Breakdown
-- **Endpoint**: `GET /dashboard/category-breakdown`
+- **Endpoint**: `GET /api/v1/dashboard/category-breakdown`
 - **Authentication**: Required
 - **Role Required**: `viewer`, `analyst`, `admin`
 - **Description**: Returns total amount grouped by category
@@ -560,7 +574,7 @@ Error responses:
   - `401 Unauthorized`: Invalid token
 
 ### Monthly Trends
-- **Endpoint**: `GET /dashboard/monthly-trends`
+- **Endpoint**: `GET /api/v1/dashboard/monthly-trends`
 - **Authentication**: Required
 - **Role Required**: `viewer`, `analyst`, `admin`
 - **Description**: Returns income and expense totals by month
@@ -592,8 +606,29 @@ Error responses:
   - `403 Forbidden`: Not viewer/analyst/admin
   - `401 Unauthorized`: Invalid token
 
+
+### Weekly Trends
+- **Endpoint**: `GET /api/v1/dashboard/weekly-trends`
+- **Authentication**: Required
+- **Role Required**: `viewer`, `analyst`, `admin`
+- **Description**: Returns income and expense totals aggregated by week (ISO format).
+- **Response** (200 OK):
+  ```json
+  {
+    "success": true,
+    "message": "Weekly trends fetched",
+    "data": [
+      {
+        "week": "2026-W13",
+        "income": 1200.00,
+        "expense": 450.00
+      }
+    ]
+  }
+  ```````
+
 ### Recent Activity
-- **Endpoint**: `GET /dashboard/recent-activity`
+- **Endpoint**: `GET /api/v1/dashboard/recent-activity`
 - **Authentication**: Required
 - **Role Required**: `viewer`, `analyst`, `admin`
 - **Description**: Returns 10 most recent records
@@ -631,6 +666,29 @@ Error responses:
   - `401 Unauthorized`: Invalid token
 
 ---
+
+
+### Admin Insights
+- **Endpoint**: `GET /api/v1/dashboard/admin-insights`
+- **Authentication**: Required
+- **Role Required**: `admin`, `analyst`
+- **Description**: Retrieves advanced platform-wide telemetry, including highest 30-day transaction, top 5 expenses, and rolling expense ratio.
+- **Response** (200 OK):
+  ```json
+  {
+    "success": true,
+    "message": "Admin insights fetched successfully",
+    "data": {
+      "highest_transaction_30d": { "id": 1, "amount": 5000.0, "type": "expense" },
+      "top_5_expenses": [],
+      "expense_to_income_ratio": 1.25,
+      "unusual_transactions": [],
+      "total_income": 50000.0,
+      "net_balance": 15000.0,
+      "recent_transactions": []
+    }
+  }
+  ```````
 
 ## Health Check Endpoints
 
@@ -730,24 +788,24 @@ Error responses:
 
 | Endpoint | Viewer | Analyst | Admin |
 |----------|--------|---------|-------|
-| POST /auth/register | ✓ | ✓ | ✓ |
-| POST /auth/login | ✓ | ✓ | ✓ |
-| GET /auth/me | ✓ | ✓ | ✓ |
-| POST /users | ✗ | ✗ | ✓ |
-| GET /users | ✗ | ✗ | ✓ |
-| GET /users/{id} | ✗ | ✗ | ✓ |
-| PUT /users/{id} | ✗ | ✗ | ✓ |
-| PATCH /users/{id}/status | ✗ | ✗ | ✓ |
-| DELETE /users/{id} | ✗ | ✗ | ✓ |
-| POST /records | ✗ | ✗ | ✓ |
-| GET /records | ✗ | ✓ | ✓ |
-| GET /records/{id} | ✗ | ✓ | ✓ |
-| PUT /records/{id} | ✗ | ✗ | ✓ |
-| DELETE /records/{id} | ✗ | ✗ | ✓ |
-| GET /dashboard/summary | ✓ | ✓ | ✓ |
-| GET /dashboard/category-breakdown | ✓ | ✓ | ✓ |
-| GET /dashboard/monthly-trends | ✓ | ✓ | ✓ |
-| GET /dashboard/recent-activity | ✓ | ✓ | ✓ |
+| POST /api/v1/auth/register | ✓ | ✓ | ✓ |
+| POST /api/v1/auth/login | ✓ | ✓ | ✓ |
+| GET /api/v1/auth/me | ✓ | ✓ | ✓ |
+| POST /api/v1/users | ✗ | ✗ | ✓ |
+| GET /api/v1/users | ✗ | ✗ | ✓ |
+| GET /api/v1/users/{id} | ✗ | ✗ | ✓ |
+| PUT /api/v1/users/{id} | ✗ | ✗ | ✓ |
+| PATCH /api/v1/users/{id}/status | ✗ | ✗ | ✓ |
+| DELETE /api/v1/users/{id} | ✗ | ✗ | ✓ |
+| POST /api/v1/records | ✗ | ✗ | ✓ |
+| GET /api/v1/records | ✗ | ✓ | ✓ |
+| GET /api/v1/records/{id} | ✗ | ✓ | ✓ |
+| PUT /api/v1/records/{id} | ✗ | ✗ | ✓ |
+| DELETE /api/v1/records/{id} | ✗ | ✗ | ✓ |
+| GET /api/v1/dashboard/summary | ✓ | ✓ | ✓ |
+| GET /api/v1/dashboard/category-breakdown | ✓ | ✓ | ✓ |
+| GET /api/v1/dashboard/monthly-trends | ✓ | ✓ | ✓ |
+| GET /api/v1/dashboard/recent-activity | ✓ | ✓ | ✓ |
 
 ---
 
@@ -784,6 +842,3 @@ curl "http://localhost:8000/health"
 - **ReDoc**: `/redoc` (static documentation)
 
 
-### GET /dashboard/admin-insights
-- **Description:** Retrieves advanced platform-wide telemetry, including top 5 expenses, highest 30-day transaction, unusual > transactions, and the platform-wide expense-to-income ratio.
-- **Roles:** dmin, nalyst
