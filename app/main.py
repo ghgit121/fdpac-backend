@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -23,6 +23,23 @@ APP_STARTED_AT = datetime.now(timezone.utc)
 APP_STARTED_PERF = time.perf_counter()
 
 
+import os
+import httpx
+import asyncio
+
+async def keep_alive():
+    url = os.getenv('KEEP_ALIVE_URL') or os.getenv('RENDER_EXTERNAL_URL')
+    if not url: return
+        
+    logger.info(f"Keep-alive active, pings {url} every 10 min.")
+    while True:
+        try:
+            await asyncio.sleep(600)
+            async with httpx.AsyncClient() as client:
+                res = await client.get(f"{url}/health/liveness", timeout=10.0)
+        except asyncio.CancelledError: break
+        except Exception: pass
+
 async def seed_roles() -> None:
     """Ensure the three default roles exist. Safe to call multiple times."""
     async with AsyncSessionLocal() as db:
@@ -41,6 +58,7 @@ async def seed_roles() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup / shutdown lifecycle hook."""
+    task = asyncio.create_task(keep_alive())
     try:
         await seed_roles()
         logger.info("Default roles seeded successfully.")
@@ -85,7 +103,7 @@ def create_app() -> FastAPI:
         redoc_url="/redoc",
     )
 
-    # Normalize CORS origins — auto-prepend https:// if no scheme is present
+    # Normalize CORS origins â€” auto-prepend https:// if no scheme is present
     def _normalize_origin(o: str) -> str:
         o = o.strip()
         if o and not o.startswith(("http://", "https://", "*")):
@@ -142,7 +160,7 @@ def create_app() -> FastAPI:
             content={"success": False, "message": "Internal server error"},
         )
 
-    # ── Root endpoint ─────────────────────────────────────────────────
+    # â”€â”€ Root endpoint â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     @app.get("/")
     async def root():
         return {
@@ -157,7 +175,7 @@ def create_app() -> FastAPI:
             },
         }
 
-    # ── Health endpoints ──────────────────────────────────────────────
+    # â”€â”€ Health endpoints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     @app.get("/health")
     async def health_check():
         check_started = time.perf_counter()
@@ -203,7 +221,7 @@ def create_app() -> FastAPI:
             },
         )
 
-    # ── API routers ───────────────────────────────────────────────────
+    # â”€â”€ API routers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     app.include_router(auth_router, prefix=settings.api_prefix)
     app.include_router(user_router, prefix=settings.api_prefix)
     app.include_router(record_router, prefix=settings.api_prefix)
@@ -213,3 +231,5 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+
+
