@@ -782,3 +782,8 @@ curl "http://localhost:8000/health"
 
 - **Swagger UI**: `/docs` (interactive API testing)
 - **ReDoc**: `/redoc` (static documentation)
+
+
+### GET /dashboard/admin-insights
+- **Description:** Retrieves advanced platform-wide telemetry, including top 5 expenses, highest 30-day transaction, unusual > transactions, and the platform-wide expense-to-income ratio.
+- **Roles:** dmin, nalyst

@@ -285,3 +285,8 @@ Tests cover:
 ---
 
 **Built with ❤️ using FastAPI, SQLAlchemy, and PostgreSQL**
+
+## Recent Architectural Enhancements & Submission Notes
+- **Universal Data Ledger Architecture**: Transitioned from isolated user data to a centralized global ledger. Admins log transactions while Analysts and Viewers consume real-time platform-wide insights without arbitrary scoping.
+- **Cross-Driver Database Compatibility**: Refactored database engine to seamlessly auto-detect dialects, enabling SQLite usage for local Pytest suites (check_same_thread=False) and asyncPG for production Postgres deployments.
+- **Advanced SQL Aggregations**: New dashboard endpoints (/dashboard/admin-insights) push complex Mathematical reductions (top 5 transactions, uncommon > spikes, rolling 30-day expense ratios) straight to the ORM logic.

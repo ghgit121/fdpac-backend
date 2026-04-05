@@ -470,3 +470,7 @@ These are **not implemented** but documented for clarity:
 ---
 
 **For questions or clarifications on architecture, refer to the code or raise an issue in the repository.**
+
+
+### Universal Records Data Scope
+**Assumption:** The application tracks finances for a singular corporate entity, rather than distinct personal accounts. The created_by field dictates authorship, not restrictive visibility. All records are un-siloed explicitly so roles fetch accurate, platform-wide aggregations.
